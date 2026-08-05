@@ -1,0 +1,33 @@
+{
+  "name": "mernstack",
+  "version": "1.0.0",
+  "description": "",
+  "keywords": [
+    "MERN",
+    "STACK"
+  ],
+  "homepage": "https://github.com/Af-Than/MERN-STACK-LIVECHATAPP#readme",
+  "bugs": {
+    "url": "https://github.com/Af-Than/MERN-STACK-LIVECHATAPP/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Af-Than/MERN-STACK-LIVECHATAPP.git"
+  },
+  "license": "ISC",
+  "author": "Afthan",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}

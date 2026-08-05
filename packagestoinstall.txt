@@ -1,0 +1,4 @@
+npm i dotenv--for environmental variables
+npm init--to initiate
+npm i express-for api
+npm i nodemon--to keep on updating the changes within the server
