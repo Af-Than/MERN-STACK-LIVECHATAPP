@@ -5,3 +5,5 @@ npm i nodemon--to keep on updating the changes within the server
 npm install react-router-dom -- in frontend
 npm i @chakra-ui/react @emotion/react
  npm install cors on backend file
+ npm install express-async-handler--to handle the errors
+ npm install mongodb--to handle database
