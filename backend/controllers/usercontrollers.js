@@ -37,4 +37,35 @@ const registerUser= asyncHandler(async (req,res)=>{
     }
 });
 
-module.exports={registerUser};
+const loginUser= asyncHandler(async (req,res)=>{
+    const {email,password}=req.body;
+    
+    const user=await userModel.findOne({email});
+    if(user && (await user.matchPassword(password))){
+        res.json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            pic: user.pic,
+            token: generateToken(user._id)
+        });
+        console.log("Login Successful");
+    }
+    else{
+        res.status(401);
+        throw new Error("Invalid Email or Password");
+    }
+
+});
+
+const allUsers= asyncHandler(async (req,res)=>{
+    const keyword=req.query.search?{
+        $or: [
+            { name: { $regex: req.query.search, $options: "i" } },   //http://localhost:5000/api/users?search=afthan then it gets the value of afthan in keyword
+            { email: { $regex: req.query.search, $options: "i" } }
+        ]
+    }:{}; 
+    const users=await userModel.find(keyword).find({_id:{$ne:req.user._id}}); //find all users except the logged in user
+    res.send(users);
+});
+module.exports={registerUser,loginUser,allUsers};
