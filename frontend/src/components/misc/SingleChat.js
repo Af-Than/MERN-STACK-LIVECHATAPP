@@ -17,13 +17,21 @@ import ProfileModel from "./ProfileModel";
 import UpdateGroupChatModal from "./UpdateGroupChatModal";
 import axios from "axios";
 import ScrollableChat from "./ScrollableChat";
+import io from "socket.io-client";
+
+var socket, selectedChatCompare;
+
+const ENDPOINT = process.env.REACT_APP_API_ENDPOINT || "http://localhost:5000";
 
 const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const { user, selectedChat, setSelectedChat } = ChatState();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [newMessage, setNewMessage] = useState("");
+  const [socketConnected, setSocketConnected] = useState(false);
   const toast = useToast();
+  const [typing, setTyping] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
 
   const fetchMessages = async () => {
     if (!selectedChat) return;
@@ -40,6 +48,9 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       );
       setMessages(data);
       setLoading(false);
+      if (socket) {
+        socket.emit("join chat", selectedChat._id);
+      }
     } catch (error) {
       toast({
         title: "Error Occurred!",
@@ -53,9 +64,45 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     }
   };
 
+  // Socket Initial Setup
+  useEffect(() => {
+    if (!user) return;
+    socket = io(ENDPOINT);
+    socket.emit("setup", user);
+    socket.on("connected", () => setSocketConnected(true));
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [user]);
+
+  // Fetch messages whenever active selected chat updates
   useEffect(() => {
     fetchMessages();
+    selectedChatCompare = selectedChat;
   }, [selectedChat]);
+
+  // Handle incoming real-time socket messages
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleMessageReceived = (newMessageRecieved) => {
+      if (
+        !selectedChatCompare ||
+        selectedChatCompare._id !== newMessageRecieved.chat._id
+      ) {
+        // Notification handling can be triggered here
+      } else {
+        setMessages((prevMessages) => [...prevMessages, newMessageRecieved]);
+      }
+    };
+
+    socket.on("message received", handleMessageReceived);
+
+    return () => {
+      socket.off("message received", handleMessageReceived);
+    };
+  }, []);
 
   const sendMessage = async (event) => {
     if ((event.key === "Enter" || event.type === "click") && newMessage.trim()) {
@@ -77,6 +124,10 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
           },
           config
         );
+
+        if (socket) {
+          socket.emit("new message", data);
+        }
         setMessages((prev) => [...prev, data]);
       } catch (error) {
         toast({
@@ -106,21 +157,21 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
           w="100%"
           h="100%"
           borderRadius="2xl"
-          boxShadow="0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02)"
-          overflowY="hidden"
           border="1px solid"
           borderColor="gray.100"
+          boxShadow="0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02)"
+          overflowY={{ md: "hidden" }}
         >
           {/* Header Bar */}
           <Box
+            pb={{ base: 3 }}
+            px={{ base: 2 }}
             fontSize={{ base: "18px", md: "22px" }}
-            pb={3}
-            px={2}
-            w="100%"
             fontFamily="Work sans"
             display="flex"
             justifyContent="space-between"
             alignItems="center"
+            w="100%"
             borderBottom="1px solid"
             borderColor="gray.100"
           >
@@ -135,7 +186,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
 
             {!selectedChat.isGroupChat ? (
               <>
-                <Text fontWeight="600" color="gray.700" letterSpacing="0.2px">
+                <Text color="gray.700" fontWeight="600" letterSpacing="0.2px">
                   {getSender(user, selectedChat.users)}
                 </Text>
                 <ProfileModel user={getSenderFull(user, selectedChat.users)} />
@@ -143,11 +194,11 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
             ) : (
               <>
                 <Text
-                  fontWeight="600"
                   color="gray.800"
+                  fontWeight="600"
+                  letterSpacing="0.5px"
                   textAlign="center"
                   flex="1"
-                  letterSpacing="0.5px"
                 >
                   {selectedChat.chatName.toUpperCase()}
                 </Text>
@@ -159,7 +210,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
             )}
           </Box>
 
-          {/* Chat Container */}
+          {/* Chat Messages Body */}
           <Box
             display="flex"
             flexDir="column"
@@ -169,28 +220,23 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
             w="100%"
             h="100%"
             borderRadius="xl"
-            overflowY="hidden"
-            mt={3}
             border="1px solid"
             borderColor="gray.100"
+            overflowY="hidden"
+            mt={3}
           >
             {loading ? (
               <Spinner
                 size="xl"
                 w={12}
                 h={12}
+                thickness="3px"
+                color="teal.400"
                 alignSelf="center"
                 margin="auto"
-                color="teal.400"
-                thickness="3px"
               />
             ) : (
-              <Box
-                display="flex"
-                flexDir="column"
-                h="100%"
-                overflowY="hidden"
-              >
+              <Box display="flex" flexDir="column" overflowY="hidden" h="100%">
                 <ScrollableChat messages={messages} />
               </Box>
             )}
@@ -206,25 +252,25 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                   value={newMessage}
                   borderRadius="full"
                   fontSize="15px"
-                  pr="4.5rem"
-                  boxShadow="0px 2px 8px rgba(0,0,0,0.04)"
                   borderColor="gray.200"
+                  boxShadow="0px 2px 8px rgba(0,0,0,0.04)"
                   _hover={{ borderColor: "teal.300" }}
                   _focus={{
                     borderColor: "teal.400",
                     boxShadow: "0 0 0 2px rgba(56, 178, 172, 0.2)",
                   }}
+                  pr="4.5rem"
                 />
                 <InputRightElement width="3.5rem">
                   <IconButton
-                    h="2.2rem"
-                    w="2.2rem"
                     size="sm"
                     colorScheme="teal"
                     borderRadius="full"
                     icon={<ArrowForwardIcon />}
                     onClick={sendMessage}
                     isDisabled={!newMessage.trim()}
+                    w="2.2rem"
+                    h="2.2rem"
                   />
                 </InputRightElement>
               </InputGroup>
@@ -232,19 +278,19 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
           </Box>
         </Box>
       ) : (
-        /* Empty State Screen */
+        /* Unselected State Screen */
         <Box
           display="flex"
-          flexDir="column"
           alignItems="center"
           justifyContent="center"
           h="100%"
           w="100%"
           bg="white"
           borderRadius="2xl"
-          boxShadow="sm"
           border="1px solid"
           borderColor="gray.100"
+          boxShadow="sm"
+          flexDir="column"
         >
           <Text
             fontSize="2xl"
