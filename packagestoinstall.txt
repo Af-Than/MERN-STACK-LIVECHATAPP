@@ -13,3 +13,4 @@ Using $regex Operator (Recommended)
 JavaScript
 // Search for users whose name contains "john" (case-sensitive)
 db.users.find({ name: { $regex: "john" } });
+ npm i react-scrollable-feed

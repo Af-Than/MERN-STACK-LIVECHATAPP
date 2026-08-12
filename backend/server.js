@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const userRoutes = require("./routes/users");
 const chatRoutes = require("./routes/chats"); // 👈 1. Import chat routes
+const messageRoutes = require("./routes/messages"); // 👈 2. Import message routes
 const { notFound, errorHandler } = require("./middleware/error");
 
 dotenv.config();
@@ -22,8 +23,9 @@ app.get("/", (req, res) => {
 // Routes
 app.use("/api/users", userRoutes);
 app.use("/api/chats", chatRoutes); // 👈 2. Mount chat routes BEFORE error middleware
+app.use("/api/messages", messageRoutes); // 👈 3. Mount message routes
 
-// Error Handling Middleware
+// Error Handling Middleware 
 app.use(notFound);
 app.use(errorHandler);
 

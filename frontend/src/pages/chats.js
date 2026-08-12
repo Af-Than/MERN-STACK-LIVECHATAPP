@@ -7,6 +7,7 @@ import ChatBox from '../components/misc/ChatBox';
 
 function Chats() {
   const { user } = ChatState();
+  const [fetchAgain, setFetchAgain] = React.useState(false);
 
   return (
     <Box
@@ -29,8 +30,8 @@ function Chats() {
         h="91.5vh"
         p="10px"
       >
-        {user && <MyChats />}
-        {user && <ChatBox />}
+        {user && <MyChats fetchAgain={fetchAgain}/>}
+        {user && <ChatBox fetchAgain={fetchAgain}  setFetchAgain={setFetchAgain}/>}
       </Box>
 
       <h2>Welcome, {user?.name}</h2>

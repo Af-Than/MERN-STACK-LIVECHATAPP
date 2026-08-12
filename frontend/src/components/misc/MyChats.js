@@ -14,47 +14,48 @@ import {
 } from '@chakra-ui/react';
 import axios from 'axios';
 import Loading from './Loading';
+import GroupChatModal from './GroupChatModal';
 
-// Import your custom Chatlogics helper
-import Chatlogics from '../../config/Chatlogics'; 
+// Using named import to match config/Chatlogics.js
+import { getSenderFull } from '../../config/Chatlogics'; 
 
-// Font Awesome Imports
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faUsers } from '@fortawesome/free-solid-svg-icons';
 
-const MyChats = () => {
+const MyChats = ({ fetchAgain }) => {
   const [loggedUser, setLoggedUser] = useState();
   const { user, selectedChat, setSelectedChat, chats, setChats } = ChatState();
   const toast = useToast();
 
-const fetchChats = useCallback(async () => {
-  try {
-    const config = {
-      headers: {
-        Authorization: `Bearer ${user.token}`,
-      },
-    };
+  const fetchChats = useCallback(async () => {
+    try {
+      const config = {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      };
 
-    const { data } = await axios.get("/api/chats", config);
-    setChats(data);
-  } catch (error) {
-    toast({
-      title: "Error Occurred!",
-      description: "Failed to Load the chats",
-      status: "error",
-      duration: 3000,
-      isClosable: true,
-      position: "bottom-left",
-    });
-  }
-}, [user, setChats, toast]);
+      const { data } = await axios.get("/api/chats", config);
+      setChats(data);
+    } catch (error) {
+      toast({
+        title: "Error Occurred!",
+        description: "Failed to Load the chats",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+        position: "bottom-left",
+      });
+    }
+  }, [user, setChats, toast]);
 
-useEffect(() => {
-  setLoggedUser(JSON.parse(localStorage.getItem("userInfo")));
-  if (user) {
-    fetchChats();
-  }
-}, [user, fetchChats]);
+  useEffect(() => {
+    setLoggedUser(JSON.parse(localStorage.getItem("userInfo")));
+    if (user) {
+      fetchChats();
+    }
+  }, [user, fetchAgain, fetchChats]);
+
   return (
     <Box
       display={{ base: selectedChat ? "none" : "flex", md: "flex" }}
@@ -79,7 +80,7 @@ useEffect(() => {
         alignItems="center"
       >
         <Text
-          fontSize={{ base: "22px", md: "24px" }}
+          fontSize={{ base: "20px", md: "22px" }}
           fontFamily="Work Sans"
           fontWeight="bold"
           color="gray.800"
@@ -88,19 +89,21 @@ useEffect(() => {
           My Chats
         </Text>
         
-        <Button
-          display="flex"
-          fontSize="14px"
-          colorScheme="teal"
-          variant="solid"
-          borderRadius="xl"
-          shadow="sm"
-          _hover={{ transform: "translateY(-1px)", shadow: "md" }}
-          transition="all 0.2s"
-          leftIcon={<FontAwesomeIcon icon={faPlus} />}
-        >
-          New Group
-        </Button>
+        <GroupChatModal>
+          <Button
+            display="flex"
+            fontSize="13px"
+            colorScheme="teal"
+            variant="solid"
+            borderRadius="xl"
+            shadow="sm"
+            _hover={{ transform: "translateY(-1px)", shadow: "md" }}
+            transition="all 0.2s"
+            leftIcon={<FontAwesomeIcon icon={faPlus} />}
+          >
+            New Group
+          </Button>
+        </GroupChatModal>
       </Box>
 
       {/* Chat List Container */}
@@ -126,8 +129,7 @@ useEffect(() => {
             }}
           >
             {chats.map((chat) => {
-              // Using Chatlogics to extract the other user details when not a group chat
-              const otherUser = !chat.isGroupChat && loggedUser ? Chatlogics(loggedUser, chat.users) : null;
+              const otherUser = !chat.isGroupChat && loggedUser ? getSenderFull(loggedUser, chat.users) : null;
               const isSelected = selectedChat?._id === chat._id;
 
               return (
@@ -169,7 +171,7 @@ useEffect(() => {
                       <Flex justifyContent="space-between" alignItems="center">
                         <Text 
                           fontWeight="bold" 
-                          fontSize="md" 
+                          fontSize="sm" 
                           isTruncated
                           color={isSelected ? "white" : "gray.800"}
                         >

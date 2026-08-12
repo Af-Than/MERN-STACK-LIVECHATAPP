@@ -20,10 +20,12 @@
     Input,
     useToast,
     Spinner,
+    Image,
     } from '@chakra-ui/react';
     import axios from 'axios';
     import { BellIcon, ChevronDownIcon, SearchIcon } from '@chakra-ui/icons';
     import { useNavigate } from 'react-router-dom';
+    import logo from '../users/images.png'; // Import the logo image
     import { ChatState } from '../../context/chatprov';
     import ProfileModel from './ProfileModel';
     import Loading from './Loading';
@@ -139,17 +141,33 @@
             </Button>
             </Tooltip>
 
-            {/* App Name */}
-            <Text
-            fontSize="2xl"
-            fontFamily="Work Sans"
-            fontWeight="bold"
-            letterSpacing="tight"
-            color="teal.600"
-            >
-            ConvoHub
-            </Text>
+   <Box display="flex" alignItems="center" gap={3}>
+  <Text
+    fontSize="3xl"
+    fontFamily="'Poppins', 'Outfit', sans-serif" // 👈 Unique modern font
+    fontWeight="900"
+    letterSpacing="wider"
+    color="teal.600"
+    cursor="pointer"
+    transition="all 0.4s ease-in-out"
+    _hover={{
+      bgGradient: "linear(to-r, red.400, orange.400, yellow.400, green.400, blue.400, purple.500)",
+      bgClip: "text",
+      textShadow: "0 0 12px rgba(236, 72, 153, 0.6), 0 0 24px rgba(59, 130, 246, 0.4)",
+      transform: "scale(1.05)",
+    }}
+  >  ApeX Chat
+  </Text>
 
+  <Image
+    src={logo}
+    alt="ApeX Chat Logo"
+    boxSize="45px"
+    objectFit="contain"
+    transition="transform 0.3s ease"
+    _hover={{ transform: "rotate(12deg) scale(1.1)" }}
+  />
+</Box>
             {/* Right Action Icons */}
             <HStack spacing={3}>
             {/* Notifications Menu */}
