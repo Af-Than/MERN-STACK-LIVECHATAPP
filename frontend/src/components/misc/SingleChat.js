@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { ChatState } from "../../context/chatprov";
 import {
   Box,
@@ -18,24 +18,35 @@ import UpdateGroupChatModal from "./UpdateGroupChatModal";
 import axios from "axios";
 import ScrollableChat from "./ScrollableChat";
 import io from "socket.io-client";
+const notiSound = require("../users/notisound.mp3");
 
 var socket, selectedChatCompare;
 
 const ENDPOINT = process.env.REACT_APP_API_ENDPOINT || "http://localhost:5000";
 
 const SingleChat = ({ fetchAgain, setFetchAgain }) => {
-  const { user, selectedChat, setSelectedChat } = ChatState();
+  const { user, selectedChat, setSelectedChat, setNotifications } = ChatState();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [socketConnected, setSocketConnected] = useState(false);
   const [typing, setTyping] = useState(false);
-  const [typingUser, setTypingUser] = useState(""); // Stores name of user currently typing
+  const [typingUser, setTypingUser] = useState("");
   const toast = useToast();
 
   const lastTypingTimeRef = useRef();
 
-  const fetchMessages = async () => {
+  // Memoized sound player to satisfy React Hook dependency rules
+  const playCustomSound = useCallback(() => {
+    try {
+      const audio = new Audio(notiSound);
+      audio.play().catch((err) => console.log("Autoplay blocked:", err));
+    } catch (err) {
+      console.log("Audio play error:", err);
+    }
+  }, []);
+
+  const fetchMessages = useCallback(async () => {
     if (!selectedChat) return;
     try {
       setLoading(true);
@@ -50,8 +61,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       );
       setMessages(data);
       setLoading(false);
-      
-      // Guarded socket call
+
       if (socket && socketConnected) {
         socket.emit("join chat", selectedChat._id);
       }
@@ -66,7 +76,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       });
       setLoading(false);
     }
-  };
+  }, [selectedChat, user, socketConnected, toast]);
 
   // Socket Initial Setup
   useEffect(() => {
@@ -75,7 +85,6 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     socket.emit("setup", user);
     socket.on("connected", () => setSocketConnected(true));
 
-    // Listen for typing events and extract user's name
     socket.on("typing", (userData) => {
       if (userData && userData.name) {
         setTypingUser(userData.name);
@@ -98,7 +107,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     fetchMessages();
     selectedChatCompare = selectedChat;
     setTypingUser("");
-  }, [selectedChat]);
+  }, [selectedChat, fetchMessages]);
 
   // Handle incoming real-time socket messages
   useEffect(() => {
@@ -109,7 +118,20 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
         !selectedChatCompare ||
         selectedChatCompare._id !== newMessageRecieved.chat._id
       ) {
-        // Notification handling can be triggered here
+        setNotifications((prevNotifs) => {
+          const isDuplicate = prevNotifs.some(
+            (n) => n._id === newMessageRecieved._id
+          );
+
+          if (!isDuplicate) {
+            playCustomSound();
+            if (typeof setFetchAgain === "function") {
+              setFetchAgain((prev) => !prev);
+            }
+            return [newMessageRecieved, ...prevNotifs];
+          }
+          return prevNotifs;
+        });
       } else {
         setMessages((prevMessages) => [...prevMessages, newMessageRecieved]);
       }
@@ -120,11 +142,10 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     return () => {
       socket.off("message received", handleMessageReceived);
     };
-  }, []);
+  }, [setNotifications, setFetchAgain, playCustomSound]);
 
   const sendMessage = async (event) => {
     if ((event.key === "Enter" || event.type === "click") && newMessage.trim()) {
-      // Guard socket emission before sending message
       if (socket && socketConnected) {
         socket.emit("stop typing", selectedChat._id);
         setTyping(false);
@@ -167,7 +188,6 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const typingHandler = (e) => {
     setNewMessage(e.target.value);
 
-    // CRITICAL GUARD: Stop execution if socket instance or connection isn't ready
     if (!socket || !socketConnected) return;
 
     if (!typing) {
@@ -183,7 +203,6 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       const timeNow = new Date().getTime();
       const timeDiff = timeNow - lastTypingTimeRef.current;
 
-      // Re-check socket presence inside async timeout
       if (timeDiff >= timerLength && socket && socketConnected) {
         socket.emit("stop typing", selectedChat._id);
         setTyping(false);
