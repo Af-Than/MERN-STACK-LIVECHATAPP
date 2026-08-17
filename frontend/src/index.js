@@ -5,15 +5,15 @@ import App from './App';
 import ChatProvider from './context/chatprov';
 import { BrowserRouter } from 'react-router-dom';
 import { ChakraProvider } from '@chakra-ui/react';
-import axios from 'axios'; // 👈 Import axios
+import axios from 'axios';
 
-// Set global base URL for all axios HTTP requests
-axios.defaults.baseURL = process.env.SERVER_URL || "http://localhost:5000";
+axios.defaults.baseURL = "https://mern-stack-livechatapp.onrender.com";
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
+
 root.render(
   <React.StrictMode>
-    <BrowserRouter> 
+    <BrowserRouter>
       <ChatProvider>
         <ChakraProvider>
           <App />
