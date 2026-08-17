@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { ChatState } from "../../context/chatprov";
 import {
   Box,
@@ -29,9 +29,11 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const [loading, setLoading] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [socketConnected, setSocketConnected] = useState(false);
-  const toast = useToast();
   const [typing, setTyping] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
+  const [typingUser, setTypingUser] = useState(""); // Stores name of user currently typing
+  const toast = useToast();
+
+  const lastTypingTimeRef = useRef();
 
   const fetchMessages = async () => {
     if (!selectedChat) return;
@@ -48,7 +50,9 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       );
       setMessages(data);
       setLoading(false);
-      if (socket) {
+      
+      // Guarded socket call
+      if (socket && socketConnected) {
         socket.emit("join chat", selectedChat._id);
       }
     } catch (error) {
@@ -71,6 +75,19 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     socket.emit("setup", user);
     socket.on("connected", () => setSocketConnected(true));
 
+    // Listen for typing events and extract user's name
+    socket.on("typing", (userData) => {
+      if (userData && userData.name) {
+        setTypingUser(userData.name);
+      } else if (typeof userData === "string") {
+        setTypingUser(userData);
+      } else {
+        setTypingUser("Someone");
+      }
+    });
+
+    socket.on("stop typing", () => setTypingUser(""));
+
     return () => {
       socket.disconnect();
     };
@@ -80,6 +97,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   useEffect(() => {
     fetchMessages();
     selectedChatCompare = selectedChat;
+    setTypingUser("");
   }, [selectedChat]);
 
   // Handle incoming real-time socket messages
@@ -106,6 +124,11 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
 
   const sendMessage = async (event) => {
     if ((event.key === "Enter" || event.type === "click") && newMessage.trim()) {
+      // Guard socket emission before sending message
+      if (socket && socketConnected) {
+        socket.emit("stop typing", selectedChat._id);
+        setTyping(false);
+      }
       try {
         const config = {
           headers: {
@@ -125,7 +148,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
           config
         );
 
-        if (socket) {
+        if (socket && socketConnected) {
           socket.emit("new message", data);
         }
         setMessages((prev) => [...prev, data]);
@@ -143,6 +166,29 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
 
   const typingHandler = (e) => {
     setNewMessage(e.target.value);
+
+    // CRITICAL GUARD: Stop execution if socket instance or connection isn't ready
+    if (!socket || !socketConnected) return;
+
+    if (!typing) {
+      setTyping(true);
+      socket.emit("typing", { room: selectedChat._id, user });
+    }
+
+    const lastTime = new Date().getTime();
+    lastTypingTimeRef.current = lastTime;
+    const timerLength = 2330;
+
+    setTimeout(() => {
+      const timeNow = new Date().getTime();
+      const timeDiff = timeNow - lastTypingTimeRef.current;
+
+      // Re-check socket presence inside async timeout
+      if (timeDiff >= timerLength && socket && socketConnected) {
+        socket.emit("stop typing", selectedChat._id);
+        setTyping(false);
+      }
+    }, timerLength);
   };
 
   return (
@@ -241,8 +287,71 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
               </Box>
             )}
 
+            {/* Dynamic User Typing Indicator Bubble */}
+            {typingUser && (
+              <Box
+                alignSelf="flex-start"
+                bg="white"
+                px={4}
+                py={2}
+                borderRadius="2xl"
+                borderBottomLeftRadius="xs"
+                mb={2}
+                mt={2}
+                display="inline-flex"
+                alignItems="center"
+                gap={1.5}
+                border="1px solid"
+                borderColor="gray.200"
+                boxShadow="sm"
+              >
+                <Text fontSize="xs" color="gray.600" fontWeight="500" mr={1}>
+                  {typingUser} is typing
+                </Text>
+                <Box
+                  w="6px"
+                  h="6px"
+                  bg="teal.400"
+                  borderRadius="full"
+                  animation="pulse 1.4s infinite 0s"
+                  sx={{
+                    "@keyframes pulse": {
+                      "0%, 100%": { opacity: 0.3, transform: "scale(0.8)" },
+                      "50%": { opacity: 1, transform: "scale(1.2)" },
+                    },
+                  }}
+                />
+                <Box
+                  w="6px"
+                  h="6px"
+                  bg="teal.400"
+                  borderRadius="full"
+                  animation="pulse 1.4s infinite 0.2s"
+                  sx={{
+                    "@keyframes pulse": {
+                      "0%, 100%": { opacity: 0.3, transform: "scale(0.8)" },
+                      "50%": { opacity: 1, transform: "scale(1.2)" },
+                    },
+                  }}
+                />
+                <Box
+                  w="6px"
+                  h="6px"
+                  bg="teal.400"
+                  borderRadius="full"
+                  animation="pulse 1.4s infinite 0.4s"
+                  sx={{
+                    "@keyframes pulse": {
+                      "0%, 100%": { opacity: 0.3, transform: "scale(0.8)" },
+                      "50%": { opacity: 1, transform: "scale(1.2)" },
+                    },
+                  }}
+                />
+              </Box>
+            )}
+
             {/* Input Bar */}
-            <FormControl onKeyDown={sendMessage} isRequired mt={3}>
+            <FormControl onKeyDown={sendMessage} isRequired mt={typingUser ? 0 : 3}>
               <InputGroup size="lg">
                 <Input
                   variant="outline"
