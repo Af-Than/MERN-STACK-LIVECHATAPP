@@ -22,7 +22,7 @@ const notiSound = require("../users/notisound.mp3");
 
 var socket, selectedChatCompare;
 
-const ENDPOINT = process.env.REACT_APP_API_ENDPOINT || "http://localhost:5000";
+const ENDPOINT = process.env.REACT_APP_SERVER_URL || process.env.REACT_APP_API_ENDPOINT || "https://mern-stack-livechatapp.onrender.com";
 
 const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const { user, selectedChat, setSelectedChat, setNotifications } = ChatState();

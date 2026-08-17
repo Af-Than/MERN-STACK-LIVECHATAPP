@@ -19,12 +19,30 @@ const app = express();
 // CORS CONFIGURATION
 // ======================================================
 
-const CLIENT_URL = "https://mern-stack-livechatapp.vercel.app";
+const allowedOrigins = [
+  "https://mern-stack-livechatapp.vercel.app",
+  "https://mern-stack-livechatapp-e99gqru22-affu.vercel.app",
+  process.env.CLIENT_URL,
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+].filter(Boolean);
 
 app.use(
   cors({
-    origin: CLIENT_URL,
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith(".vercel.app") ||
+        process.env.NODE_ENV !== "production"
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
@@ -79,7 +97,7 @@ const io = require("socket.io")(server, {
   pingTimeout: 60000,
 
   cors: {
-    origin: CLIENT_URL,
+    origin: (origin, callback) => callback(null, true),
     methods: ["GET", "POST"],
     credentials: true,
   },

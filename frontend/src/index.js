@@ -7,7 +7,8 @@ import { BrowserRouter } from 'react-router-dom';
 import { ChakraProvider } from '@chakra-ui/react';
 import axios from 'axios';
 
-axios.defaults.baseURL = "https://mern-stack-livechatapp.onrender.com";
+const SERVER_URL = process.env.REACT_APP_SERVER_URL || "https://mern-stack-livechatapp.onrender.com";
+axios.defaults.baseURL = SERVER_URL;
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
@@ -21,4 +22,4 @@ root.render(
       </ChatProvider>
     </BrowserRouter>
   </React.StrictMode>
-);
+); 
