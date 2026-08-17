@@ -8,7 +8,7 @@ import { ChakraProvider } from '@chakra-ui/react';
 import axios from 'axios'; // 👈 Import axios
 
 // Set global base URL for all axios HTTP requests
-axios.defaults.baseURL = process.env.REACT_APP_API_ENDPOINT || "http://localhost:5000";
+axios.defaults.baseURL = process.env.SERVER_URL || "http://localhost:5000";
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
