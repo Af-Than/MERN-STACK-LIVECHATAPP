@@ -8,16 +8,15 @@ const messageRoutes = require("./routes/messages");
 
 const { notFound, errorHandler } = require("./middleware/error");
 
+const path = require("path");
+
+dotenv.config({ path: path.resolve(__dirname, ".env") });
 dotenv.config();
 
 const connectDB = require("./config/db");
 connectDB();
 
 const app = express();
-
-// ======================================================
-// CORS CONFIGURATION
-// ======================================================
 
 const allowedOrigins = [
   "https://mern-stack-livechatapp.vercel.app",
